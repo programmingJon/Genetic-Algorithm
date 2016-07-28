@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 
@@ -8,17 +9,25 @@ public class Population {
 	ArrayList<Individual> individuals;
 	int sizeOfPopulation;
 	int noOfNodes;
+	List<Integer> GENE;
 	
-	Population(ArrayList<Individual> individuals, int sizeOfPopulation, int noOfNodes){
-		this.individuals = individuals;
+	Population(List<Individual> individuals, int sizeOfPopulation, int noOfNodes, List<Integer> gene){
+		this.individuals = (ArrayList<Individual>) individuals;
 		this.sizeOfPopulation = sizeOfPopulation;
 		this.noOfNodes = noOfNodes;
+		this.GENE = gene;
 	}
 	
 	public void createPopulation(){
 		Individual ind;
+		ArrayList<Integer> arrList;
+		Random rand = new Random();
 		for (int i = 0; i < this.sizeOfPopulation; i++){
-			ind = new Individual(noOfNodes, new ArrayList<Integer>());
+			arrList = new ArrayList<Integer>();
+			for (int j = 0; j < GENE.size(); j++){
+				arrList.add((int) rand.nextInt(10));
+			}
+			ind = new Individual(arrList);
 			this.individuals.add(ind);
 		}
 	}
@@ -31,6 +40,16 @@ public class Population {
 	
 	public void fitnessFunction(Individual ind){
 		int fitness = 0;
+		
+		for (int i = 0; i < GENE.size(); i++){
+			if (ind.genes.get(i) == GENE.get(i)){
+				fitness++;
+			}
+		}
+		
+		ind.fitness = fitness;
+		
+		/*
 		ArrayList<Integer> colours = ind.nodeColours;
 		int count = 0;
 		System.out.println(colours);
@@ -50,7 +69,7 @@ public class Population {
 			//	fitness++;
 			//}
 		}
-		ind.fitness = fitness;
+		*/
 	}
 	
 	public Individual getFittest(ArrayList<Individual> individuals){
@@ -60,12 +79,12 @@ public class Population {
 				fittest = ind;
 			}
 		}
-		System.out.println("Highest Fitness is: " + fittest.fitness);
+		//System.out.println("Highest Fitness is: " + fittest.fitness);
 		return fittest;
 	}
 	
-	/*
-	 * Old Selection method. Wasn't biased enough to the fittest individuals.
+	
+	/*//Old Selection method. Wasn't biased enough to the fittest individuals.
 	public ArrayList<Individual> selection(){
 		ArrayList<Individual> list = new ArrayList<Individual>();
 		int accFitness = 0;
@@ -94,12 +113,10 @@ public class Population {
 		}
 		
 		return list;
-	}
-	*/
+	}*/
 	
 	/*
 	 * Elitism
-	 */
 	public ArrayList<Individual> selection(){
 		ArrayList<Individual> list = new ArrayList<Individual>();
 		int accFitness = 0;
@@ -107,19 +124,17 @@ public class Population {
 		
 		Collections.sort(individuals);
 		
-		for (int index = 0; index < individuals.size() / 2; index++){
-			list.add(individuals.get(index));
-		}
+		list.add(individuals.get(0));
 		
 		for (Individual ind: individuals){
 			//System.out.println(ind.fitness);
-			accFitness = ind.fitness;
+			accFitness += ind.fitness;
 			ind.accFitness = accFitness;
 		}
 		
 		
 		int randomInt;
-		for (int i = 0; i < sizeOfPopulation / 2; i++){
+		for (int i = 1; i < sizeOfPopulation; i++){
 			randomInt = rand.nextInt(accFitness);
 			Individual selectedInd = individuals.get(0);
 			for (Individual ind: individuals){
@@ -130,19 +145,45 @@ public class Population {
 			}
 			list.add(selectedInd);
 		}
+
+		Collections.sort(list);
 		
-		
+		System.out.println("Post-Selection: \n");
+		for (Individual ind: list){
+			System.out.println(ind.genes);
+			System.out.println(ind.fitness);
+		}
 		
 		return list;
 	}
+	*/
 	
+	public ArrayList<Individual> tournamentSelection(int tournamentSize){
+		ArrayList<Individual> list = new ArrayList<Individual>();
+		ArrayList<Individual> selected = new ArrayList<Individual>();
+		
+		while (selected.size() < individuals.size()){
+			for (int i = 0; i < tournamentSize; i++){
+				int random = (int) (Math.random() * individuals.size());
+				list.add(individuals.get(random));
+			}
+			selected.add(getFittest(list));
+			list.clear();
+		}
+		return selected;
+	}
 	
-	public void crossBreed(double crossbreedRate){
+	/*
+	 * Single Point Crossover
+	 * Not effective
+	 */
+	/*public ArrayList<Individual> crossBreed(double crossbreedRate){
 		Random rand = new Random();
 		Individual indi;
 		Individual indj;
 		int i, j, crossoverPoint;
-		ArrayList<Integer> iColours, jColours, newIColours, newJColours;
+		ArrayList<Integer> iGenes, jGenes, newIGenes, newJGenes;
+		ArrayList<Individual> individuals = this.individuals;
 		
 		for (int iter = 0; iter < crossbreedRate*sizeOfPopulation; iter++){
 			i = rand.nextInt(sizeOfPopulation);
@@ -155,31 +196,68 @@ public class Population {
 			indi = individuals.get(i);
 			indj = individuals.get(j);
 			
-			iColours = indi.nodeColours;
-			jColours = indj.nodeColours;
+			iGenes = indi.genes;
+			jGenes = indj.genes;
 			
-			crossoverPoint = rand.nextInt(iColours.size());
-			newIColours = new ArrayList<Integer>(iColours.subList(0, crossoverPoint));
-			newIColours.addAll(new ArrayList<Integer>(jColours.subList(crossoverPoint, jColours.size())));
-			newJColours = new ArrayList<Integer>(jColours.subList(0, crossoverPoint));
-			newJColours.addAll(new ArrayList<Integer>(iColours.subList(crossoverPoint, iColours.size())));
+			crossoverPoint = rand.nextInt(iGenes.size());
+			newIGenes = new ArrayList<Integer>(iGenes.subList(0, crossoverPoint));
+			newIGenes.addAll(new ArrayList<Integer>(jGenes.subList(crossoverPoint, jGenes.size())));
+			newJGenes = new ArrayList<Integer>(jGenes.subList(0, crossoverPoint));
+			newJGenes.addAll(new ArrayList<Integer>(iGenes.subList(crossoverPoint, iGenes.size())));
 			
-			indi.nodeColours = newIColours;
-			indj.nodeColours = newJColours;
+			indi.genes = newIGenes;
+			indj.genes = newJGenes;
 		}
+		return individuals;
+	}
+	*/
+	
+	/*
+	 * Uniform crossover
+	 * Much more effective
+	 */
+	public ArrayList<Individual> crossBreed(double crossBreedRate){
+        ArrayList<Integer> geneList = new ArrayList<Integer>();
+        ArrayList<Individual> indList = new ArrayList<Individual>();
+        Individual ind1, ind2;
+        
+        for (int index = 0; index < individuals.size(); index++){
+        	if (Math.random() < crossBreedRate){
+	        	ind1 = individuals.get(index);
+	        	ind2 = individuals.get((index + 1)%individuals.size());
+		        for (int i = 0; i < ind1.genes.size(); i++) {
+		            if (Math.random() <= 0.5) {
+		            	geneList.add(ind1.genes.get(i));
+		            } else {
+		            	geneList.add(ind2.genes.get(i));
+		            }
+		        }
+		        ind1 = new Individual(geneList);
+		        ind1.genes = geneList;
+		        indList.add(ind1);
+		        geneList = new ArrayList<Integer>();
+        	} else {
+        		indList.add(individuals.get(index));
+        	}
+        }
+        return indList;
 	}
 	
 	public void mutation(double mutationRate){
 		Random rand = new Random();
-		double[] doubles = rand.doubles((long) (sizeOfPopulation*noOfNodes), 0, 1).toArray();
+		double[] doubles = rand.doubles((long) (sizeOfPopulation*GENE.size()), 0, 1).toArray();
 		Individual ind;
 		
-		//for (Individual ind: individuals){
 		for (int i = 0; i < individuals.size(); i ++){
 			ind = individuals.get(i);
-			for (int j = 0; j < noOfNodes; j++){
-				if (doubles[i*noOfNodes + j] < mutationRate){
-					ind.nodeColours.set(j, rand.nextInt(10));
+			//System.out.println(ind.genes);
+			for (int j = 0; j < GENE.size(); j++){
+				//System.out.println("I : " + i + " J: " + j);
+				if (doubles[i*GENE.size() + j] < mutationRate){
+					//System.out.println("Mutation occurring to: " + ind + " at point " + j);
+					//System.out.println("Current genes: " + ind.genes);
+					ind.genes.set(j, rand.nextInt(6));
+					//System.out.println("New genes:     " + ind.genes);
 				}
 			}
 		
